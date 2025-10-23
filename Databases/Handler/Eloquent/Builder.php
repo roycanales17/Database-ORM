@@ -34,6 +34,9 @@
 		/** @var array SET clause data for UPDATE queries */
 		protected array $sets = [];
 
+		/** @var array Bound parameter values for SET clauses in UPDATE queries */
+		protected array $setBindings = [];
+
 		/** @var array Bound parameters for prepared statements */
 		protected array $bindings = [];
 
@@ -130,8 +133,15 @@
 
 			$sql = "UPDATE {$this->table} SET " . implode(', ', $setClauses) . ' ' . $this->buildWhere();
 
+			// Merge SET bindings first, then WHERE bindings
+			if (property_exists($this, 'setBindings')) {
+				$bindings = array_merge($this->setBindings, $this->bindings);
+			} else {
+				$bindings = $this->bindings;
+			}
+
 			return Database::server($this->server)
-				->query($this->lastSql = $sql, $this->bindings)
+				->query($this->lastSql = $sql, $bindings)
 				->totalAffected();
 		}
 

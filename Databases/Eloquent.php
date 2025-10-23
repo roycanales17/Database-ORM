@@ -63,11 +63,10 @@
 		public function set(string $column, mixed $value): self
 		{
 			$this->sets[$column] = '?';
-			$this->bindings[] = $value;
+			$this->setBindings[] = $value;
 
 			return $this;
 		}
-
 
 		/**
 		 * Add a WHERE condition to the query.
