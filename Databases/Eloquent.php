@@ -47,6 +47,31 @@
 		}
 
 		/**
+		 * Add a raw SQL SELECT expression.
+		 *
+		 * Example:
+		 * ```php
+		 * $query->selectRaw('COUNT(*) AS total');
+		 * $query->selectRaw('users.*, NOW() AS current_time');
+		 * $query->selectRaw('SUM(amount) as total_amount, AVG(amount) as avg_amount');
+		 * ```
+		 *
+		 * @param string $expression The raw SQL select expression.
+		 * @param array $bindings Optional bindings for parameterized expressions.
+		 * @return $this
+		 */
+		public function selectRaw(string $expression, array $bindings = []): self
+		{
+			$this->columns[] = $expression;
+
+			if (!empty($bindings)) {
+				$this->bindings = array_merge($this->bindings, $bindings);
+			}
+
+			return $this;
+		}
+
+		/**
 		 * Add a column/value pair for the UPDATE statement.
 		 *
 		 * Example:
@@ -254,6 +279,67 @@
 		 */
 		public function offset(int $offset): self {
 			$this->offset = $offset;
+			return $this;
+		}
+
+		/**
+		 * Add a GROUP BY clause to the query.
+		 *
+		 * Example:
+		 * ```php
+		 * $query->groupBy('category_id');
+		 * $query->groupBy('category_id', 'status');
+		 * ```
+		 *
+		 * @param string ...$columns One or more column names to group by.
+		 * @return $this
+		 */
+		public function groupBy(string ...$columns): self
+		{
+			$this->groups = array_merge($this->groups, $columns);
+			return $this;
+		}
+
+		/**
+		 * Add a HAVING clause to the query.
+		 *
+		 * Example:
+		 * ```php
+		 * $query->groupBy('category_id')
+		 *       ->having('COUNT(id)', '>', 5);
+		 * ```
+		 *
+		 * @param string $column   The column or aggregate function.
+		 * @param string $operator The comparison operator (=, >, <, etc.).
+		 * @param mixed  $value    The value to compare against.
+		 * @return $this
+		 */
+		public function having(string $column, string $operator, mixed $value): self
+		{
+			$this->havings[] = "$column $operator ?";
+			$this->bindings[] = $value;
+			return $this;
+		}
+
+		/**
+		 * Add a raw HAVING clause to the query.
+		 *
+		 * Example:
+		 * ```php
+		 * $query->havingRaw('SUM(amount) > ?', [100]);
+		 * $query->havingRaw('AVG(score) >= 90');
+		 * ```
+		 *
+		 * @param string $expression Raw SQL HAVING expression.
+		 * @param array  $bindings   Optional bound parameters for the expression.
+		 * @return $this
+		 */
+		public function havingRaw(string $expression, array $bindings = []): self
+		{
+			$this->havings[] = $expression;
+			if (!empty($bindings)) {
+				$this->bindings = array_merge($this->bindings, $bindings);
+			}
 			return $this;
 		}
 	}

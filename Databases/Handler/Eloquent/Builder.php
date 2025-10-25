@@ -43,6 +43,12 @@
 		/** @var array ORDER BY clauses */
 		protected array $orders = [];
 
+		/** @var array GROUP BY clause columns */
+		protected array $groups = [];
+
+		/** @var array HAVING clause conditions */
+		protected array $havings = [];
+
 		/** @var int|null Query limit */
 		protected ?int $limit = null;
 
@@ -60,7 +66,8 @@
 		 *
 		 * @return string SQL WHERE clause or empty string if no conditions
 		 */
-		protected function buildWhere(): string {
+		protected function buildWhere(): string
+		{
 			if (empty($this->wheres)) {
 				return '';
 			}
@@ -94,7 +101,17 @@
 		 */
 		public function exists(): bool
 		{
-			$sql = "SELECT 1 FROM {$this->table} " . $this->buildWhere() . " LIMIT 1";
+			$sql = "SELECT 1 FROM {$this->table} " . $this->buildWhere();
+
+			// Append GROUP BY and HAVING if present
+			if (!empty($this->groups)) {
+				$sql .= " GROUP BY " . implode(', ', $this->groups);
+			}
+			if (!empty($this->havings)) {
+				$sql .= " HAVING " . implode(' AND ', $this->havings);
+			}
+
+			$sql .= " LIMIT 1";
 
 			$result = Database::server($this->server)
 				->query($this->lastSql = $sql, $this->bindings)
@@ -112,11 +129,19 @@
 		{
 			$sql = "SELECT COUNT(*) as total FROM {$this->table} " . $this->buildWhere();
 
+			// Append GROUP BY and HAVING if present
+			if (!empty($this->groups)) {
+				$sql .= " GROUP BY " . implode(', ', $this->groups);
+			}
+			if (!empty($this->havings)) {
+				$sql .= " HAVING " . implode(' AND ', $this->havings);
+			}
+
 			$row = Database::server($this->server)
 				->query($this->lastSql = $sql, $this->bindings)
 				->field();
 
-			return intval( $row );
+			return intval($row);
 		}
 
 		/**
@@ -223,21 +248,37 @@
 		/**
 		 * Get the raw SQL string from the current query.
 		 *
-		 * @param bool $interpolate Whether to replace bindings with values
-		 * @return string Raw SQL string
+		 * If no query has been executed yet, this will build a SELECT statement
+		 * using the defined table, columns, and WHERE clauses.
+		 *
+		 * When `$interpolate` is true, parameter bindings will be replaced
+		 * with their quoted values for readability and debugging.
+		 *
+		 * @param bool $interpolate Whether to replace bindings with quoted values.
+		 * @return string The full SQL query with or without interpolated bindings.
 		 */
-		public function rawSQL(bool $interpolate = true): string {
+		public function rawSQL(bool $interpolate = true): string
+		{
 			if (empty($this->lastSql)) {
 				$cols = $this->columns ?: ['*'];
 				$sql = "SELECT " . implode(', ', $cols) . " FROM {$this->table} " . $this->buildWhere();
+
+				// Append GROUP BY and HAVING if present
+				if (!empty($this->groups)) {
+					$sql .= " GROUP BY " . implode(', ', $this->groups);
+				}
+				if (!empty($this->havings)) {
+					$sql .= " HAVING " . implode(' AND ', $this->havings);
+				}
 			} else {
 				$sql = $this->lastSql;
 			}
 
 			$raw = $sql;
-			if ($interpolate) {
+
+			if ($interpolate && !empty($this->bindings)) {
 				foreach ($this->bindings as $param => $value) {
-					$quoted = is_numeric($value) ? $value : "'" . addslashes($value) . "'";
+					$quoted = is_numeric($value) ? $value : "'" . addslashes((string) $value) . "'";
 					if (is_string($param)) {
 						$raw = str_replace($param, $quoted, $raw);
 					} else {
@@ -246,6 +287,6 @@
 				}
 			}
 
-			return $raw;
+			return trim($raw);
 		}
 	}
