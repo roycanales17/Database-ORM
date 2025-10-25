@@ -132,6 +132,29 @@
 		}
 
 		/**
+		 * Add a raw SQL WHERE condition to the query.
+		 *
+		 * Example:
+		 * ```php
+		 * $query->whereRaw('reset_expires > NOW()');
+		 * $query->whereRaw('created_at BETWEEN ? AND ?', [$start, $end]);
+		 * ```
+		 *
+		 * @param string $expression The raw SQL expression.
+		 * @param array $bindings Optional bindings to safely parameterize parts of the raw SQL.
+		 * @param string $boolean Boolean operator (AND/OR).
+		 * @return $this
+		 */
+		public function whereRaw(string $expression, array $bindings = [], string $boolean = 'AND'): self
+		{
+			$this->wheres[] = [$expression, $boolean];
+			if (!empty($bindings)) {
+				$this->bindings = array_merge($this->bindings, $bindings);
+			}
+			return $this;
+		}
+
+		/**
 		 * Add a WHERE condition comparing two columns.
 		 *
 		 * @param string $first    The first column.
