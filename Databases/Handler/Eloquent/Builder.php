@@ -49,6 +49,9 @@
 		/** @var array HAVING clause conditions */
 		protected array $havings = [];
 
+		/** @var array List of JOIN clauses for the query */
+		protected array $joins = [];
+
 		/** @var int|null Query limit */
 		protected ?int $limit = null;
 
@@ -249,7 +252,8 @@
 		 * Get the raw SQL string from the current query.
 		 *
 		 * If no query has been executed yet, this will build a SELECT statement
-		 * using the defined table, columns, and WHERE clauses.
+		 * using the defined table, columns, WHERE clauses, JOINs, GROUP BY,
+		 * HAVING, ORDER BY, LIMIT, and OFFSET clauses.
 		 *
 		 * When `$interpolate` is true, parameter bindings will be replaced
 		 * with their quoted values for readability and debugging.
@@ -261,14 +265,37 @@
 		{
 			if (empty($this->lastSql)) {
 				$cols = $this->columns ?: ['*'];
-				$sql = "SELECT " . implode(', ', $cols) . " FROM {$this->table} " . $this->buildWhere();
+				$sql = "SELECT " . implode(', ', $cols) . " FROM {$this->table}";
 
-				// Append GROUP BY and HAVING if present
+				// Append JOIN clauses
+				if (!empty($this->joins)) {
+					$sql .= " " . implode(' ', $this->joins);
+				}
+
+				// Append WHERE clause
+				$sql .= ' ' . $this->buildWhere();
+
+				// Append GROUP BY clause
 				if (!empty($this->groups)) {
 					$sql .= " GROUP BY " . implode(', ', $this->groups);
 				}
+
+				// Append HAVING clause
 				if (!empty($this->havings)) {
 					$sql .= " HAVING " . implode(' AND ', $this->havings);
+				}
+
+				// Append ORDER BY clause
+				if (!empty($this->orders)) {
+					$sql .= " ORDER BY " . implode(', ', $this->orders);
+				}
+
+				// Append LIMIT and OFFSET
+				if ($this->limit !== null) {
+					$sql .= " LIMIT " . intval($this->limit);
+				}
+				if ($this->offset !== null) {
+					$sql .= " OFFSET " . intval($this->offset);
 				}
 			} else {
 				$sql = $this->lastSql;
@@ -276,6 +303,7 @@
 
 			$raw = $sql;
 
+			// Interpolate bindings for debugging readability
 			if ($interpolate && !empty($this->bindings)) {
 				foreach ($this->bindings as $param => $value) {
 					$quoted = is_numeric($value) ? $value : "'" . addslashes((string) $value) . "'";

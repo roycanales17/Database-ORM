@@ -342,4 +342,64 @@
 			}
 			return $this;
 		}
+
+		/**
+		 * Add an INNER JOIN clause to the query.
+		 *
+		 * Example:
+		 * ```php
+		 * $query->join('profiles', 'users.id', '=', 'profiles.user_id');
+		 * ```
+		 *
+		 * @param string $table The name of the table to join.
+		 * @param string $first The left-hand column for the join condition.
+		 * @param string $operator The comparison operator (e.g. '=', '<>', '!=')
+		 * @param string $second The right-hand column for the join condition.
+		 * @return $this
+		 */
+		public function join(string $table, string $first, string $operator, string $second): self
+		{
+			$this->joins[] = "INNER JOIN {$table} ON {$first} {$operator} {$second}";
+			return $this;
+		}
+
+		/**
+		 * Add a LEFT JOIN clause to the query.
+		 *
+		 * Example:
+		 * ```php
+		 * $query->leftJoin('profiles', 'users.id', '=', 'profiles.user_id');
+		 * ```
+		 *
+		 * @param string $table The name of the table to join.
+		 * @param string $first The left-hand column for the join condition.
+		 * @param string $operator The comparison operator (e.g. '=', '<>', '!=')
+		 * @param string $second The right-hand column for the join condition.
+		 * @return $this
+		 */
+		public function leftJoin(string $table, string $first, string $operator, string $second): self
+		{
+			$this->joins[] = "LEFT JOIN {$table} ON {$first} {$operator} {$second}";
+			return $this;
+		}
+
+		/**
+		 * Add a RIGHT JOIN clause to the query.
+		 *
+		 * Example:
+		 * ```php
+		 * $query->rightJoin('profiles', 'users.id', '=', 'profiles.user_id');
+		 * ```
+		 *
+		 * @param string $table The name of the table to join.
+		 * @param string $first The left-hand column for the join condition.
+		 * @param string $operator The comparison operator (e.g. '=', '<>', '!=')
+		 * @param string $second The right-hand column for the join condition.
+		 * @return $this
+		 */
+		public function rightJoin(string $table, string $first, string $operator, string $second): self
+		{
+			$this->joins[] = "RIGHT JOIN {$table} ON {$first} {$operator} {$second}";
+			return $this;
+		}
 	}
