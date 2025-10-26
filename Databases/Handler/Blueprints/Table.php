@@ -173,4 +173,38 @@
 
 			return '';
 		}
+
+		/**
+		 * Define a DATETIME column.
+		 */
+		public function datetime(string $name): static
+		{
+			$this->columns[$name] = "`{$name}` DATETIME";
+			$this->lastColumn = $name;
+			return $this;
+		}
+
+		/**
+		 * Define an ENUM column.
+		 */
+		public function enum(string $name, array $values): static
+		{
+			// Escape enum values safely
+			$escaped = array_map(fn($v) => "'{$v}'", $values);
+			$enumList = implode(',', $escaped);
+
+			$this->columns[$name] = "`{$name}` ENUM({$enumList})";
+			$this->lastColumn = $name;
+			return $this;
+		}
+
+		/**
+		 * Add a regular INDEX for the given column.
+		 */
+		public function index(string $column, ?string $indexName = null): static
+		{
+			$indexName ??= "index_{$column}";
+			$this->columns[$indexName] = "INDEX `{$indexName}` (`{$column}`)";
+			return $this;
+		}
 	}
