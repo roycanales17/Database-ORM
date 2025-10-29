@@ -2,6 +2,12 @@
 
 	namespace App\Databases\Handler\Blueprints;
 
+	/**
+	 * Class Table
+	 *
+	 * A lightweight schema builder for defining table structures dynamically.
+	 * Supports chained syntax for defining columns, defaults, constraints, and indexes.
+	 */
 	class Table
 	{
 		protected string $table;
@@ -9,9 +15,21 @@
 		protected array $options = [];
 		protected ?string $lastColumn = null;
 
+		/**
+		 * Initialize a new Table blueprint for a specific table.
+		 */
 		public function __construct(string $table)
 		{
 			$this->table = $table;
+		}
+
+		/**
+		 * Helper: Define a column safely (nullable by default).
+		 */
+		private function defineColumn(string $name, string $type): void
+		{
+			$this->columns[$name] = "`{$name}` {$type} NULL";
+			$this->lastColumn = $name;
 		}
 
 		/**
@@ -19,11 +37,9 @@
 		 */
 		public function id(string $name = 'id', int $startingIndex = 0, ?int $length = null): static
 		{
-			$column = "`{$name}` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY";
-
-			if ($length) {
-				$column = "`{$name}` INT({$length}) UNSIGNED AUTO_INCREMENT PRIMARY KEY";
-			}
+			$column = $length
+				? "`{$name}` INT({$length}) UNSIGNED AUTO_INCREMENT PRIMARY KEY"
+				: "`{$name}` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY";
 
 			$this->columns[$name] = $column;
 			$this->lastColumn = $name;
@@ -40,8 +56,7 @@
 		 */
 		public function string(string $name, int $length = 255): static
 		{
-			$this->columns[$name] = "`{$name}` VARCHAR({$length})";
-			$this->lastColumn = $name;
+			$this->defineColumn($name, "VARCHAR({$length})");
 			return $this;
 		}
 
@@ -50,8 +65,7 @@
 		 */
 		public function text(string $name): static
 		{
-			$this->columns[$name] = "`{$name}` TEXT";
-			$this->lastColumn = $name;
+			$this->defineColumn($name, "TEXT");
 			return $this;
 		}
 
@@ -60,8 +74,7 @@
 		 */
 		public function integer(string $name): static
 		{
-			$this->columns[$name] = "`{$name}` INT";
-			$this->lastColumn = $name;
+			$this->defineColumn($name, "INT");
 			return $this;
 		}
 
@@ -70,8 +83,7 @@
 		 */
 		public function decimal(string $name, int $precision = 8, int $scale = 2): static
 		{
-			$this->columns[$name] = "`{$name}` DECIMAL({$precision},{$scale})";
-			$this->lastColumn = $name;
+			$this->defineColumn($name, "DECIMAL({$precision},{$scale})");
 			return $this;
 		}
 
@@ -80,8 +92,7 @@
 		 */
 		public function boolean(string $name): static
 		{
-			$this->columns[$name] = "`{$name}` TINYINT(1)";
-			$this->lastColumn = $name;
+			$this->defineColumn($name, "TINYINT(1)");
 			return $this;
 		}
 
@@ -90,8 +101,16 @@
 		 */
 		public function timestamp(string $name): static
 		{
-			$this->columns[$name] = "`{$name}` TIMESTAMP";
-			$this->lastColumn = $name;
+			$this->defineColumn($name, "TIMESTAMP");
+			return $this;
+		}
+
+		/**
+		 * Define a DATETIME column.
+		 */
+		public function datetime(string $name): static
+		{
+			$this->defineColumn($name, "DATETIME");
 			return $this;
 		}
 
@@ -100,8 +119,19 @@
 		 */
 		public function timestamps(): static
 		{
-			$this->columns['created_at'] = "`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP";
-			$this->columns['updated_at'] = "`updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP";
+			$this->columns['created_at'] = "`created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP";
+			$this->columns['updated_at'] = "`updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP";
+			return $this;
+		}
+
+		/**
+		 * Define an ENUM column.
+		 */
+		public function enum(string $name, array $values): static
+		{
+			$escaped = array_map(fn($v) => "'" . str_replace("'", "''", $v) . "'", $values);
+			$enumList = implode(',', $escaped);
+			$this->defineColumn($name, "ENUM({$enumList})");
 			return $this;
 		}
 
@@ -115,13 +145,38 @@
 		}
 
 		/**
+		 * Add a regular INDEX for the given column.
+		 */
+		public function index(string $column, ?string $indexName = null): static
+		{
+			$indexName ??= "index_{$column}";
+			$this->columns[$indexName] = "INDEX `{$indexName}` (`{$column}`)";
+			return $this;
+		}
+
+		/**
+		 * Add a PRIMARY key for an existing column (non-auto-increment).
+		 */
+		public function primary(string $column): static
+		{
+			$this->columns["primary_{$column}"] = "PRIMARY KEY (`{$column}`)";
+			return $this;
+		}
+
+		/**
 		 * Add a DEFAULT value to the last defined column.
 		 */
 		public function default(mixed $value): static
 		{
 			if ($this->lastColumn && isset($this->columns[$this->lastColumn])) {
-				$formatted = is_numeric($value) ? $value : "'{$value}'";
-				$this->columns[$this->lastColumn] .= " DEFAULT {$formatted}";
+				if (is_null($value) || strtoupper((string) $value) === 'NULL') {
+					$this->columns[$this->lastColumn] .= " DEFAULT NULL";
+				} elseif (is_numeric($value)) {
+					$this->columns[$this->lastColumn] .= " DEFAULT {$value}";
+				} else {
+					$escaped = str_replace("'", "''", (string) $value);
+					$this->columns[$this->lastColumn] .= " DEFAULT '{$escaped}'";
+				}
 			}
 			return $this;
 		}
@@ -144,6 +199,32 @@
 		{
 			if ($this->lastColumn && isset($this->columns[$this->lastColumn])) {
 				$this->columns[$this->lastColumn] .= " ON UPDATE CURRENT_TIMESTAMP";
+			}
+			return $this;
+		}
+
+		/**
+		 * Allow the column to contain NULL values.
+		 */
+		public function nullable(): static
+		{
+			if ($this->lastColumn && isset($this->columns[$this->lastColumn])) {
+				if (!str_contains($this->columns[$this->lastColumn], 'NULL')) {
+					$this->columns[$this->lastColumn] .= " NULL";
+				}
+			}
+			return $this;
+		}
+
+		/**
+		 * Enforce the column to be NOT NULL.
+		 */
+		public function notNull(): static
+		{
+			if ($this->lastColumn && isset($this->columns[$this->lastColumn])) {
+				// Replace NULL with NOT NULL if already exists
+				$this->columns[$this->lastColumn] = preg_replace('/\bNULL\b/', '', $this->columns[$this->lastColumn]);
+				$this->columns[$this->lastColumn] .= " NOT NULL";
 			}
 			return $this;
 		}
@@ -172,39 +253,5 @@
 			}
 
 			return '';
-		}
-
-		/**
-		 * Define a DATETIME column.
-		 */
-		public function datetime(string $name): static
-		{
-			$this->columns[$name] = "`{$name}` DATETIME";
-			$this->lastColumn = $name;
-			return $this;
-		}
-
-		/**
-		 * Define an ENUM column.
-		 */
-		public function enum(string $name, array $values): static
-		{
-			// Escape enum values safely
-			$escaped = array_map(fn($v) => "'{$v}'", $values);
-			$enumList = implode(',', $escaped);
-
-			$this->columns[$name] = "`{$name}` ENUM({$enumList})";
-			$this->lastColumn = $name;
-			return $this;
-		}
-
-		/**
-		 * Add a regular INDEX for the given column.
-		 */
-		public function index(string $column, ?string $indexName = null): static
-		{
-			$indexName ??= "index_{$column}";
-			$this->columns[$indexName] = "INDEX `{$indexName}` (`{$column}`)";
-			return $this;
 		}
 	}
