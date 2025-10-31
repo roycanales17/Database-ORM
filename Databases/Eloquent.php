@@ -110,7 +110,7 @@
 		 */
 		public function where(string|Closure $col, mixed $OperatorOrValue = null, mixed $value = self::EMPTY): self {
 			if ($col instanceof Closure) {
-				$nested = new self();
+				$nested = new self($this->server);
 				$col($nested);
 				$this->wheres[] = ['nested', $nested->wheres, 'AND'];
 				$this->bindings = array_merge($this->bindings, $nested->bindings);
@@ -138,7 +138,7 @@
 		 */
 		public function orWhere(string|Closure $col, mixed $OperatorOrValue = '', mixed $value = self::EMPTY): self {
 			if ($col instanceof Closure) {
-				$nested = new self();
+				$nested = new self($this->server);
 				$col($nested);
 				$this->wheres[] = ['nested', $nested->wheres, 'OR'];
 				$this->bindings = array_merge($this->bindings, $nested->bindings);
@@ -225,7 +225,7 @@
 		 */
 		public function whereSub(string $column, string $operator, Closure $callback, string $boolean = 'AND'): self
 		{
-			$sub = new self();
+			$sub = new self($this->server);
 			$callback($sub);
 
 			$subSql = "({$sub->rawSQL(false)})";
