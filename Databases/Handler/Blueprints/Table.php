@@ -254,4 +254,16 @@
 
 			return '';
 		}
+
+
+		/**
+		 * Specify the position of the last defined column to be placed after another column.
+		 */
+		public function after(string $column): static
+		{
+			if ($this->lastColumn && isset($this->columns[$this->lastColumn])) {
+				$this->columns[$this->lastColumn] .= " AFTER `{$column}`";
+			}
+			return $this;
+		}
 	}
