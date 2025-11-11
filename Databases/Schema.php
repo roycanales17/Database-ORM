@@ -210,7 +210,7 @@
 		 */
 		public static function renameColumn(string $table, string $from, string $to, string $type): mixed
 		{
-			return "ALTER TABLE `{$table}` CHANGE `{$from}` `{$to}` {$type}";
+			return Database::query("ALTER TABLE `{$table}` CHANGE `{$from}` `{$to}` {$type}");
 		}
 
 		/**
