@@ -3,6 +3,7 @@
 	namespace App\Databases;
 
 	use App\Databases\Facade\Connections;
+	use App\Databases\Facade\Driver;
 	use App\Databases\Handler\Blueprints\ServerChain;
 	use App\Databases\Handler\Blueprints\QueryReturnType;
 	use App\Databases\Handler\DatabaseException;
@@ -18,6 +19,8 @@
 	 */
 	class Database extends Connections
 	{
+		private static array $activeTransactionDriver = [];
+
 		/**
 		 * Register a new database server configuration.
 		 *
@@ -40,13 +43,13 @@
 		/**
 		 * Get an Actions instance for the specified server.
 		 *
-		 * @param string $server The server identifier.
+		 * @param string $connection The server identifier.
 		 *
 		 * @return ServerChain
 		 */
-		public static function server(string $server): ServerChain
+		public static function server(string $connection): ServerChain
 		{
-			return new ServerChain($server);
+			return new ServerChain($connection);
 		}
 
 		/**
@@ -151,5 +154,87 @@
 			$obj = new Eloquent();
 			$obj->table($table);
 			return $obj->create($data);
+		}
+
+		/**
+		 * Begin a new database transaction on the specified server and driver.
+		 *
+		 * This method starts a new transaction that allows executing multiple
+		 * queries as a single atomic operation. Changes made during the transaction
+		 * can later be confirmed with `commit()` or discarded with `rollback()`.
+		 *
+		 * Example:
+		 * ```php
+		 * Database::beginTransaction('main');
+		 * try {
+		 *     Database::create('users', ['name' => 'John']);
+		 *     Database::update('accounts', ['balance' => 500])->where('id', 1)->execute();
+		 *     Database::commit('main');
+		 * } catch (Exception $e) {
+		 *     Database::rollback('main');
+		 *     throw $e;
+		 * }
+		 * ```
+		 *
+		 * @param string|null $server  The server identifier (optional).
+		 *                             If null, the default or random server will be used.
+		 * @param Driver      $driver  The database driver to use (default: `Driver::MYSQLI`).
+		 *
+		 * @return void
+		 */
+		public static function beginTransaction(?string $server = null, Driver $driver = Driver::MYSQLI): void
+		{
+			self::$activeTransactionDriver[$server] = $driver;
+			self::execute(self::instance($server, $driver), "START TRANSACTION;");
+		}
+
+		/**
+		 * Commit the active transaction for the specified server.
+		 *
+		 * This permanently saves all changes made during the current transaction.
+		 * Once committed, the transaction cannot be rolled back.
+		 *
+		 * Example:
+		 * ```php
+		 * Database::beginTransaction('main');
+		 * Database::update('users', ['active' => true])->where('id', 5)->execute();
+		 * Database::commit('main'); // Save all changes
+		 * ```
+		 *
+		 * @param string|null $server  The server identifier (optional).
+		 *                             If null, applies to the default or last used connection.
+		 *
+		 * @return void
+		 */
+		public static function commit(?string $server = null): void
+		{
+			$driver = self::$activeTransactionDriver[$server] ?? Driver::MYSQLI;
+			self::execute(self::instance($server, $driver), "COMMIT;");
+			unset(self::$activeTransactionDriver[$server]);
+		}
+
+		/**
+		 * Roll back the active transaction for the specified server.
+		 *
+		 * This undoes all changes made during the current transaction, restoring
+		 * the database to its state before `beginTransaction()` was called.
+		 *
+		 * Example:
+		 * ```php
+		 * Database::beginTransaction('main');
+		 * Database::create('orders', ['user_id' => 1, 'total' => 100]);
+		 * Database::rollback('main'); // Undo changes
+		 * ```
+		 *
+		 * @param string|null $server  The server identifier (optional).
+		 *                             If null, applies to the default or last used connection.
+		 *
+		 * @return void
+		 */
+		public static function rollback(?string $server = null): void
+		{
+			$driver = self::$activeTransactionDriver[$server] ?? Driver::MYSQLI;
+			self::execute(self::instance($server, $driver), "ROLLBACK;");
+			unset(self::$activeTransactionDriver[$server]);
 		}
 	}
