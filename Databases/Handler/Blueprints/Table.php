@@ -24,11 +24,11 @@
 		}
 
 		/**
-		 * Helper: Define a column safely (nullable by default).
+		 * Helper: Define a column safely (NOT NULL by default).
 		 */
 		private function defineColumn(string $name, string $type): void
 		{
-			$this->columns[$name] = "`{$name}` {$type} NULL";
+			$this->columns[$name] = "`{$name}` {$type} NOT NULL";
 			$this->lastColumn = $name;
 		}
 
@@ -115,12 +115,25 @@
 		}
 
 		/**
+		 * Define a DATE column.  <-- NEW METHOD
+		 */
+		public function date(string $name): static
+		{
+			$this->defineColumn($name, "DATE");
+			return $this;
+		}
+
+		/**
 		 * Define created_at and updated_at timestamp columns.
 		 */
 		public function timestamps(): static
 		{
-			$this->columns['created_at'] = "`created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP";
-			$this->columns['updated_at'] = "`updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP";
+			$this->columns['created_at'] =
+				"`created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP";
+
+			$this->columns['updated_at'] =
+				"`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP";
+
 			return $this;
 		}
 
@@ -169,12 +182,13 @@
 		public function default(mixed $value): static
 		{
 			if ($this->lastColumn && isset($this->columns[$this->lastColumn])) {
-				if (is_null($value) || strtoupper((string) $value) === 'NULL') {
+
+				if ($value === null || strtoupper((string)$value) === 'NULL') {
 					$this->columns[$this->lastColumn] .= " DEFAULT NULL";
 				} elseif (is_numeric($value)) {
 					$this->columns[$this->lastColumn] .= " DEFAULT {$value}";
 				} else {
-					$escaped = str_replace("'", "''", (string) $value);
+					$escaped = str_replace("'", "''", (string)$value);
 					$this->columns[$this->lastColumn] .= " DEFAULT '{$escaped}'";
 				}
 			}
@@ -209,6 +223,15 @@
 		public function nullable(): static
 		{
 			if ($this->lastColumn && isset($this->columns[$this->lastColumn])) {
+
+				// Remove NOT NULL if present
+				$this->columns[$this->lastColumn] = preg_replace(
+					'/\sNOT NULL\b/i',
+					'',
+					$this->columns[$this->lastColumn]
+				);
+
+				// Add NULL
 				if (!str_contains($this->columns[$this->lastColumn], 'NULL')) {
 					$this->columns[$this->lastColumn] .= " NULL";
 				}
@@ -222,7 +245,7 @@
 		public function notNull(): static
 		{
 			if ($this->lastColumn && isset($this->columns[$this->lastColumn])) {
-				// Replace NULL with NOT NULL if already exists
+				// Remove any NULL
 				$this->columns[$this->lastColumn] = preg_replace('/\bNULL\b/', '', $this->columns[$this->lastColumn]);
 				$this->columns[$this->lastColumn] .= " NOT NULL";
 			}
@@ -254,7 +277,6 @@
 
 			return '';
 		}
-
 
 		/**
 		 * Specify the position of the last defined column to be placed after another column.
