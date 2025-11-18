@@ -224,18 +224,19 @@
 		{
 			if ($this->lastColumn && isset($this->columns[$this->lastColumn])) {
 
-				// Remove NOT NULL if present
+				// Remove NOT NULL completely
 				$this->columns[$this->lastColumn] = preg_replace(
-					'/\sNOT NULL\b/i',
+					'/\sNOT\s+NULL\b/i',
 					'',
 					$this->columns[$this->lastColumn]
 				);
 
-				// Add NULL
-				if (!str_contains($this->columns[$this->lastColumn], 'NULL')) {
+				// Ensure it ends with NULL
+				if (!preg_match('/\bNULL\b/i', $this->columns[$this->lastColumn])) {
 					$this->columns[$this->lastColumn] .= " NULL";
 				}
 			}
+
 			return $this;
 		}
 
@@ -245,10 +246,18 @@
 		public function notNull(): static
 		{
 			if ($this->lastColumn && isset($this->columns[$this->lastColumn])) {
-				// Remove any NULL
-				$this->columns[$this->lastColumn] = preg_replace('/\bNULL\b/', '', $this->columns[$this->lastColumn]);
+
+				// Remove NULL or NOT NULL entirely
+				$this->columns[$this->lastColumn] = preg_replace(
+					'/\sNULL\b|\sNOT\s+NULL\b/i',
+					'',
+					$this->columns[$this->lastColumn]
+				);
+
+				// Append clean NOT NULL
 				$this->columns[$this->lastColumn] .= " NOT NULL";
 			}
+
 			return $this;
 		}
 
