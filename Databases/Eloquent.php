@@ -402,4 +402,29 @@
 			$this->joins[] = "RIGHT JOIN {$table} ON {$first} {$operator} {$second}";
 			return $this;
 		}
+
+		/**
+		 * Conditionally execute a callback on the query.
+		 *
+		 * Runs $callback if $condition is truthy,
+		 * otherwise runs $default if provided. Null and false are falsy; other values are truthy.
+		 *
+		 * @param mixed $condition Condition to evaluate.
+		 * @param Closure $callback Callback executed if the condition is truthy.
+		 * @param Closure|null $default Optional callback executed if condition is falsy.
+		 * @return $this
+		 */
+		public function when(mixed $condition, Closure $callback, ?Closure $default = null): self
+		{
+			// Consider null or false as falsy
+			$isTruthy = $condition !== null && $condition !== false;
+
+			if ($isTruthy) {
+				$callback($this, $condition);
+			} elseif ($default) {
+				$default($this, $condition);
+			}
+
+			return $this;
+		}
 	}
