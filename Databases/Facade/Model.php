@@ -5,6 +5,7 @@
 	use Closure;
 	use App\Databases\Eloquent;
 	use App\Databases\Handler\MetaData;
+	use App\Databases\Handler\Eloquent\Builder;
 	use App\Databases\Handler\Blueprints\UpdateChain;
 
 	/**
@@ -54,7 +55,7 @@
 		}
 
 		/**
-		 * Find a row by primary key.
+		 * Find a row by the primary key.
 		 */
 		public static function find(int $id): array
 		{
@@ -91,7 +92,7 @@
 		public static function where(
 			string|Closure $col,
 			mixed $OperatorOrValue = null,
-			mixed $value = Eloquent::EMPTY
+			mixed $value = Builder::EMPTY
 		): Eloquent {
 			$instance = new static();
 			$obj = new Eloquent($instance->server);
@@ -99,6 +100,18 @@
 			$obj->table(self::baseTable($instance));
 			$obj->where(...func_get_args());
 
+			return $obj;
+		}
+
+		/**
+		 * Start a query with a where raw condition.
+		 */
+		public static function whereRaw(string $condition, array $bindings = []): Eloquent {
+			$instance = new static();
+			$obj = new Eloquent($instance->server);
+
+			$obj->table(self::baseTable($instance));
+			$obj->whereRaw($condition, $bindings);
 			return $obj;
 		}
 
