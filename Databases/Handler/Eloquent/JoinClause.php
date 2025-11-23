@@ -2,6 +2,8 @@
 
 	namespace App\Databases\Handler\Eloquent;
 
+	use Closure;
+
 	final class JoinClause
 	{
 		public array $conditions = [];
@@ -21,15 +23,32 @@
 			return $this;
 		}
 
-		public function where(string $col, string $operator, mixed $value): self
+		// Updated where to support closure
+		public function where(string|Closure $col, string $operator = '', mixed $value = null): self
 		{
+			if ($col instanceof Closure) {
+				$nested = new self($this->type, $this->table);
+				$col($nested);
+				$this->conditions[] = '(' . implode(' AND ', $nested->conditions) . ')';
+				$this->bindings = array_merge($this->bindings, $nested->bindings);
+				return $this;
+			}
+
 			$this->conditions[] = "$col $operator ?";
 			$this->bindings[] = $value;
 			return $this;
 		}
 
-		public function orWhere(string $col, string $operator, mixed $value): self
+		public function orWhere(string $col, string $operator = '', mixed $value = null): self
 		{
+			if ($col instanceof Closure) {
+				$nested = new self($this->type, $this->table);
+				$col($nested);
+				$this->conditions[] = 'OR (' . implode(' AND ', $nested->conditions) . ')';
+				$this->bindings = array_merge($this->bindings, $nested->bindings);
+				return $this;
+			}
+
 			$this->conditions[] = "OR $col $operator ?";
 			$this->bindings[] = $value;
 			return $this;
