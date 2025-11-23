@@ -116,6 +116,54 @@
 		}
 
 		/**
+		 * Create a new Eloquent query instance with a WHERE IN clause.
+		 *
+		 * Example:
+		 * ```php
+		 * Transaction::whereIn('id', [1, 2, 3])->fetch();
+		 * ```
+		 *
+		 * @param string $column  The column name to apply the WHERE IN filter on.
+		 * @param array  $values  The list of values the column must match.
+		 *
+		 * @return Eloquent  A new Eloquent query builder instance.
+		 */
+		public static function whereIn(string $column, array $values): Eloquent {
+			$instance = new static();
+			$obj = new Eloquent($instance->server);
+
+			$obj->table(self::baseTable($instance));
+			$obj->whereIn($column, $values);
+
+			return $obj;
+		}
+
+		/**
+		 * Create a new Eloquent query instance with an OR WHERE IN clause.
+		 *
+		 * Example:
+		 * ```php
+		 * Transaction::where('type', 'income')
+		 *     ->orWhereIn('id', [5, 6])
+		 *     ->fetch();
+		 * ```
+		 *
+		 * @param string $column  The column name to apply the OR WHERE IN filter on.
+		 * @param array  $values  The list of values the column may match.
+		 *
+		 * @return Eloquent  A new Eloquent query builder instance.
+		 */
+		public static function orWhereIn(string $column, array $values): Eloquent {
+			$instance = new static();
+			$obj = new Eloquent($instance->server);
+
+			$obj->table(self::baseTable($instance));
+			$obj->orWhereIn($column, $values);
+
+			return $obj;
+		}
+
+		/**
 		 * Delete rows matching conditions.
 		 *
 		 * Example:

@@ -466,4 +466,50 @@
 			$this->where($first, $operator, $second);
 			return $this;
 		}
+
+		/**
+		 * Add a WHERE IN clause to the query.
+		 *
+		 * Example:
+		 * ```php
+		 * $query->whereIn('id', [1, 2, 3]);
+		 * ```
+		 *
+		 * @param string $column
+		 * @param array $values
+		 * @param string $boolean
+		 * @return $this
+		 */
+		public function whereIn(string $column, array $values, string $boolean = 'AND'): self
+		{
+			if (empty($values)) {
+				// Produce a safe false condition (WHERE 0 = 1)
+				$this->wheres[] = ['0 = 1', $boolean];
+				return $this;
+			}
+
+			$placeholders = implode(',', array_fill(0, count($values), '?'));
+
+			$this->wheres[] = ["{$column} IN ({$placeholders})", $boolean];
+			$this->bindings = array_merge($this->bindings, array_values($values));
+
+			return $this;
+		}
+
+		/**
+		 * Add an OR WHERE IN clause to the query.
+		 *
+		 * Example:
+		 * ```php
+		 * $query->orWhereIn('status', ['pending', 'failed']);
+		 * ```
+		 *
+		 * @param string $column
+		 * @param array $values
+		 * @return $this
+		 */
+		public function orWhereIn(string $column, array $values): self
+		{
+			return $this->whereIn($column, $values, 'OR');
+		}
 	}
