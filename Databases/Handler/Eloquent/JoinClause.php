@@ -39,18 +39,24 @@
 			return $this;
 		}
 
-		public function orWhere(string $col, string $operator = '', mixed $value = null): self
+		public function orWhere(string|Closure $col, string $operator = '', mixed $value = null): self
 		{
+			// If the first param is a closure, handle it as a nested OR group
 			if ($col instanceof Closure) {
 				$nested = new self($this->type, $this->table);
 				$col($nested);
+
+				// Wrap nested conditions in parentheses and prepend OR
 				$this->conditions[] = 'OR (' . implode(' AND ', $nested->conditions) . ')';
 				$this->bindings = array_merge($this->bindings, $nested->bindings);
+
 				return $this;
 			}
 
+			// Otherwise, normal OR condition
 			$this->conditions[] = "OR $col $operator ?";
 			$this->bindings[] = $value;
+
 			return $this;
 		}
 
