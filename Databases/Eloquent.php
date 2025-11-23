@@ -2,6 +2,7 @@
 
 	namespace App\Databases;
 
+	use App\Databases\Handler\Eloquent\JoinClause;
 	use Closure;
 	use App\Databases\Handler\Eloquent\Builder;
 
@@ -372,13 +373,31 @@
 		 * ```
 		 *
 		 * @param string $table The name of the table to join.
-		 * @param string $first The left-hand column for the join condition.
+		 * @param string|Closure $first The left-hand column for the join condition.
 		 * @param string $operator The comparison operator (e.g. '=', '<>', '!=')
 		 * @param string $second The right-hand column for the join condition.
 		 * @return $this
 		 */
-		public function leftJoin(string $table, string $first, string $operator, string $second): self
+		public function leftJoin(string $table, string|Closure $first, string $operator = '', string $second = ''): self
 		{
+			// If closure-based join:
+			if ($first instanceof Closure) {
+				$join = new JoinClause('LEFT JOIN', $table);
+
+				$first($join); // run callback
+
+				$sql = "LEFT JOIN {$table} ON " . implode(' AND ', $join->conditions);
+				$this->joins[] = $sql;
+
+				// merge join bindings into main bindings
+				if (!empty($join->bindings)) {
+					$this->bindings = array_merge($this->bindings, $join->bindings);
+				}
+
+				return $this;
+			}
+
+			// Normal join syntax
 			$this->joins[] = "LEFT JOIN {$table} ON {$first} {$operator} {$second}";
 			return $this;
 		}
@@ -392,13 +411,31 @@
 		 * ```
 		 *
 		 * @param string $table The name of the table to join.
-		 * @param string $first The left-hand column for the join condition.
+		 * @param string|Closure $first The left-hand column for the join condition.
 		 * @param string $operator The comparison operator (e.g. '=', '<>', '!=')
 		 * @param string $second The right-hand column for the join condition.
 		 * @return $this
 		 */
-		public function rightJoin(string $table, string $first, string $operator, string $second): self
+		public function rightJoin(string $table, string|Closure $first, string $operator = '', string $second = ''): self
 		{
+			// Closure-based join (Laravel-style)
+			if ($first instanceof Closure) {
+				$join = new JoinClause('RIGHT JOIN', $table);
+
+				$first($join); // run the user's callback
+
+				$sql = "RIGHT JOIN {$table} ON " . implode(' AND ', $join->conditions);
+				$this->joins[] = $sql;
+
+				// Merge bindings
+				if (!empty($join->bindings)) {
+					$this->bindings = array_merge($this->bindings, $join->bindings);
+				}
+
+				return $this;
+			}
+
+			// Standard join
 			$this->joins[] = "RIGHT JOIN {$table} ON {$first} {$operator} {$second}";
 			return $this;
 		}
