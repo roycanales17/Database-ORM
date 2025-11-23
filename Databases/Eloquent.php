@@ -439,4 +439,31 @@
 
 			return $this;
 		}
+
+		/**
+		 * Add an ON clause for joins.
+		 *
+		 * Example:
+		 * ```php
+		 * $query->leftJoin('profiles', function($join) {
+		 *     $join->on('users.id', '=', 'profiles.user_id')
+		 *          ->where('profiles.active', 1);
+		 * });
+		 * ```
+		 *
+		 * @param string $first The first column.
+		 * @param string $operator The operator (default '=')
+		 * @param string $second The second column.
+		 * @return $this
+		 */
+		public function on(string $first, string $operator = '=', string $second = ''): self
+		{
+			if ($second === '') {
+				$second = $operator;
+				$operator = '=';
+			}
+
+			$this->wheres[] = "$first $operator $second";
+			return $this;
+		}
 	}
