@@ -378,12 +378,7 @@
 				$temp = new self($this->server);
 				$first($temp);
 
-				// Use buildWhere on the temporary query but remove the leading "WHERE "
-				$onClause = $temp->buildWhere();
-				if (str_starts_with($onClause, 'WHERE ')) {
-					$onClause = substr($onClause, 6);
-				}
-
+				$onClause = $temp->buildWhere(false);
 				$this->joins[] = "LEFT JOIN {$table} ON {$onClause}";
 				$this->bindings = array_merge($this->bindings, $temp->bindings);
 				return $this;
@@ -409,12 +404,7 @@
 				$temp = new self($this->server);
 				$first($temp);
 
-				// Build the ON clause using buildWhere
-				$onClause = $temp->buildWhere();
-				if (str_starts_with($onClause, 'WHERE ')) {
-					$onClause = substr($onClause, 6);
-				}
-
+				$onClause = $temp->buildWhere(false);
 				$this->joins[] = "RIGHT JOIN {$table} ON {$onClause}";
 				$this->bindings = array_merge($this->bindings, $temp->bindings);
 				return $this;
@@ -473,7 +463,7 @@
 				$operator = '=';
 			}
 
-			$this->wheres[] = "$first $operator $second";
+			$this->where($first, $operator, $second);
 			return $this;
 		}
 	}

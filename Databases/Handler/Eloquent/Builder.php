@@ -69,32 +69,28 @@
 		 *
 		 * @return string SQL WHERE clause or empty string if no conditions
 		 */
-		protected function buildWhere(): string
+		protected function buildWhere(bool $prefix = true): string
 		{
-			if (empty($this->wheres)) {
-				return '';
-			}
+			if (empty($this->wheres)) return '';
 
-			$sql = 'WHERE ';
-			$parts = [];
+			$sql = $prefix ? 'WHERE ' : '';
 
-			foreach ($this->wheres as $where) {
-				if (($where[0] ?? '') === 'nested') {
-					$nestedParts = [];
-					$wheres = $where[1] ?? [];
-					$boolean = $where[2] ?? '';
-					foreach ($wheres as [$nExpr, $nType]) {
-						$nestedParts[] = ($nestedParts ? $nType . ' ' : '') . $nExpr;
+			$process = function(array $wheres) use (&$process): string {
+				$parts = [];
+				foreach ($wheres as $index => $where) {
+					if (($where[0] ?? '') === 'nested') {
+						[$type, $inner, $boolean] = $where;
+						$innerSql = $process($inner);
+						$parts[] = ($index > 0 ? " $boolean " : '') . "($innerSql)";
+					} else {
+						[$expr, $boolean] = $where;
+						$parts[] = ($index > 0 ? " $boolean " : '') . $expr;
 					}
-					$expr = '(' . implode(' ', $nestedParts) . ')';
-					$parts[] = ($parts ? $boolean . ' ' : '') . $expr;
-				} else {
-					[$expr, $boolean] = $where;
-					$parts[] = ($parts ? $boolean . ' ' : '') . $expr;
 				}
-			}
+				return implode('', $parts);
+			};
 
-			return $sql . implode(' ', $parts);
+			return $sql . $process($this->wheres);
 		}
 
 		/**
