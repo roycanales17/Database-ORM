@@ -378,8 +378,13 @@
 				$temp = new self($this->server);
 				$first($temp);
 
-				$sql = "LEFT JOIN $table ON " . implode(' AND ', $temp->wheres);
-				$this->joins[] = $sql;
+				// Use buildWhere on the temporary query but remove the leading "WHERE "
+				$onClause = $temp->buildWhere();
+				if (str_starts_with($onClause, 'WHERE ')) {
+					$onClause = substr($onClause, 6);
+				}
+
+				$this->joins[] = "LEFT JOIN {$table} ON {$onClause}";
 				$this->bindings = array_merge($this->bindings, $temp->bindings);
 				return $this;
 			}
@@ -404,8 +409,13 @@
 				$temp = new self($this->server);
 				$first($temp);
 
-				$sql = "RIGHT JOIN $table ON " . implode(' AND ', $temp->wheres);
-				$this->joins[] = $sql;
+				// Build the ON clause using buildWhere
+				$onClause = $temp->buildWhere();
+				if (str_starts_with($onClause, 'WHERE ')) {
+					$onClause = substr($onClause, 6);
+				}
+
+				$this->joins[] = "RIGHT JOIN {$table} ON {$onClause}";
 				$this->bindings = array_merge($this->bindings, $temp->bindings);
 				return $this;
 			}
