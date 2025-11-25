@@ -315,7 +315,7 @@
 		{
 			$sql = "ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$type}";
 			if ($after) {
-				$sql .= " {$after}";
+				$sql .= " AFTER {$after}";
 			}
 			return Database::query($sql);
 		}
