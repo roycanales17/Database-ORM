@@ -296,4 +296,27 @@
 		{
 			return self::truncate($table);
 		}
+
+		/**
+		 * Add a new column to an existing table.
+		 *
+		 * Example:
+		 * ```php
+		 * Schema::addColumn('users', 'email', 'VARCHAR(150)', 'AFTER name');
+		 * ```
+		 *
+		 * @param string $table Table name.
+		 * @param string $column Column name to add.
+		 * @param string $type Column type (e.g., VARCHAR(255), INT, TEXT).
+		 * @param string|null $after Optional placement (e.g., 'AFTER name' or 'FIRST').
+		 * @return mixed Query result.
+		 */
+		public static function addColumn(string $table, string $column, string $type, string $after = null): mixed
+		{
+			$sql = "ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$type}";
+			if ($after) {
+				$sql .= " {$after}";
+			}
+			return Database::query($sql);
+		}
 	}
