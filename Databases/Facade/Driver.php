@@ -154,6 +154,10 @@
 					QueryReturnType::ALL            => $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [],
 				};
 			} catch (PDOException $exception) {
+				if (function_exists('console_log')) {
+					console_log("PDO Query Failed: " . $query);
+					console_log("PDO Params: " . print_r($params, true));
+				}
 				throw new DatabaseException("PDO query failed: " . $exception->getMessage(), (int)$exception->getCode(), $exception);
 			}
 		}
@@ -219,6 +223,10 @@
 					QueryReturnType::ALL            => ($res instanceof mysqli_result) ? $res->fetch_all(MYSQLI_ASSOC) : [],
 				};
 			} catch (mysqli_sql_exception $exception) {
+				if (function_exists('console_log')) {
+					console_log("MySQLi Query Failed: " . $query);
+					console_log("MySQLi Params: " . print_r($params, true));
+				}
 				throw new DatabaseException("MySQLi query failed: " . $exception->getMessage(), (int)$exception->getCode(), $exception);
 			}
 		}
