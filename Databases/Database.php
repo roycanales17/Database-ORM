@@ -8,6 +8,7 @@
 	use App\Databases\Handler\Blueprints\QueryReturnType;
 	use App\Databases\Handler\DatabaseException;
 	use App\Databases\Handler\Blueprints\UpdateChain;
+	use Exception;
 
 	/**
 	 * Class Database
@@ -236,5 +237,33 @@
 			$driver = self::$activeTransactionDriver[$server] ?? Driver::MYSQLI;
 			self::execute(self::instance($server, $driver), "ROLLBACK;");
 			unset(self::$activeTransactionDriver[$server]);
+		}
+
+
+		/**
+		 * Execute a set of database operations within a transaction.
+		 *
+		 * This method wraps multiple database operations inside a transaction.
+		 * If the callback executes successfully, the transaction is committed.
+		 * If an exception occurs, the transaction is rolled back automatically.
+		 *
+		 * @param callable        $callback The callback containing database operations to execute.
+		 * @param string|null     $server   Optional server identifier. If null, the default or last used server is used.
+		 * @param Driver          $driver   The database driver to use (default: `Driver::MYSQLI`).
+		 *
+		 * @throws DatabaseException If any exception occurs during the transaction.
+		 * @return mixed Returns whatever the callback returns.
+		 */
+		public static function transaction(callable $callback, ?string $server = null, Driver $driver = Driver::MYSQLI): mixed
+		{
+			self::beginTransaction($server, $driver);
+			try {
+				$result = $callback();
+				self::commit($server);
+				return $result;
+			} catch (Exception $e) {
+				self::rollback($server);
+				throw new DatabaseException($e->getMessage(), $e->getCode(), $e);
+			}
 		}
 	}
